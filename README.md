@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Meadow Coding Exercise – Movie Email Service
 
-## Getting Started
+A production-ready Inngest function that fetches movie data from OMDb and emails a summary via Resend.
 
-First, run the development server:
+## Overview
+
+* Listens for `meadow_api/movie.watched` events
+* Looks up the movie in OMDb (full plot)
+* Sends a formatted summary email using Resend
+
+## Setup (quick)
+
+* Prereqs: Node.js 18+, OMDb API key, Resend API key, verified Resend domain
+* Install deps and set environment variables for OMDb and Resend
+* Run your Next.js app and the Inngest Dev Server
+
+## Usage
+
+* Trigger via an API endpoint that accepts `movie_title` and `recipient_email`
+* Or invoke the `movie-watched` function from the Inngest Dev UI
+* Monitor runs and step logs in the Inngest Dev Server
+
+## Features
+
+* Durable execution with automatic retries
+* Validated inputs and clear error responses
+* Step-by-step observability
+* Type-safe implementation
+
+## Email Content
+
+Includes title, year, director, plot summary, IMDb rating, and genre. Sends both HTML and plain text for deliverability.
+
+## Project Structure
+
+* `src/inngest/` – Inngest client and function
+* `src/app/api/inngest/` – Inngest route
+* `src/app/api/movie/` – Event trigger route
+
+## Testing
+
+### Test Suites
+
+The project includes comprehensive test coverage:
+
+* **Unit Tests** (`src/inngest/__tests__/functions.test.ts`): Test individual function logic, input validation, error handling
+* **API Tests** (`src/app/api/__tests__/movie.test.ts`): Test the movie API endpoint, request validation, error responses
+* **Integration Tests** (`src/__tests__/integration.test.ts`): Test complete end-to-end workflows
+* **Validation Tests** (`src/__tests__/validation.test.ts`): Test utility functions for email validation and data sanitization
+* **Fixtures** (`src/__tests__/fixtures/omdb-responses.ts`): Mock OMDb API responses for testing
+
+### Running Tests
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run tests for CI
+npm run test:ci
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Test Coverage
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Tests cover:
+* Input validation (email format, movie title)
+* Error handling (API failures, timeouts, invalid data)
+* Data sanitization (trimming, length limits)
+* MDb API integration (success, not found, errors)
+* Resend email sending (success, failures)
+* Edge cases (missing data, long titles, N/A values)
+* API endpoint validation and error responses
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Assumptions
 
-## Learn More
+* API keys provided via environment variables
+* Resend domain (e.g., `send@perr1n.com`) is verified
+* Outbound network access available
+* Resend handles actual delivery
 
-To learn more about Next.js, take a look at the following resources:
+## Testing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+* Invoke from the Inngest Dev UI with sample data
+* Hit the API endpoint with test payloads
+* Check Inngest logs for each step's output
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Recommendations 
 
-## Deploy on Vercel
+* **Resilience:**  Timeouts, exponential backoff with jitter; retry 5xx/429, not 4xx. Maybe a circuit breaker for OMDb outages.
+* **Idempotency:** An idempotency key from title+recipient, upsert a send record to avoid duplicates
+* **Validation:**Strict schemas for movie title and email, normalize inputs.
+* **Caching:** Cache successful OMDb lookups for a day or two, cache "not found" briefly to reduce thrash.
+* **Deliverability:** Configure SPF/DKIM/DMARC & always include a plain-text fallback.
+* **Observability:** Emit structured logs and simple metrics (request latency, sends, failures).
+* **Controls:** Limit concurrency and rate-limit the public trigger route; add basic security headers
+* **Production:** Provide a simple health check covering OMDb, Resend, and cache.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
